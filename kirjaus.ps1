@@ -22,7 +22,7 @@ $historyPath = Join-Path $dataFolder "historia_safe.json"
 
 $script:googleScriptUrl = "https://script.google.com/macros/s/AKfycbwhRSWotX4sJv4u8834Bq6RmZT74QjmdqDsMQSbER7LPTctwYOA7cbs9-sQempfpT4p/exec"
 
-Write-Host "--- DEBUG: Käynnistetään Dashboard v4.9 ---" -ForegroundColor Cyan
+Write-Host "--- DEBUG: Käynnistetään Dashboard v5.0 ---" -ForegroundColor Cyan
 
 function Save-All {
     $script:asetukset | ConvertTo-Json | Out-File $configPath -Encoding utf8
@@ -129,14 +129,14 @@ $btnLaske.Add_Click({
 })
 
 
-$btnSet = New-Object Windows.Forms.Button; $btnSet.Text = "⚙ ASETUKSET"; $btnSet.Location = "780,30"; $btnSet.Size = "130,35"; $btnSet.BackColor = [Drawing.Color]::FromArgb(51,51,51); $btnSet.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnSet)
-$btnClear = New-Object Windows.Forms.Button; $btnClear.Text = "🗑 TYHJENNÄ PILVI"; $btnClear.Location = "780,75"; $btnClear.Size = "130,35"; $btnClear.BackColor = [Drawing.Color]::FromArgb(68,34,34); $btnClear.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnClear)
+$btnSet = New-Object Windows.Forms.Button; $btnSet.Text = "ASETUKSET"; $btnSet.Location = "780,30"; $btnSet.Size = "130,35"; $btnSet.BackColor = [Drawing.Color]::FromArgb(51,51,51); $btnSet.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnSet)
+$btnClear = New-Object Windows.Forms.Button; $btnClear.Text = "TYHJENNÄ PILVI"; $btnClear.Location = "780,75"; $btnClear.Size = "130,35"; $btnClear.BackColor = [Drawing.Color]::FromArgb(68,34,34); $btnClear.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnClear)
 
 
 $gbNew = New-Object Windows.Forms.GroupBox; $gbNew.Text = "LISÄÄ UUSI TYÖVUORO"; $gbNew.Location = "30,140"; $gbNew.Size = "880,240"; $gbNew.ForeColor = $textC
 $f.Controls.Add($gbNew)
 
-$inLabels = @("Päivämäärä:", "Aloitus (HH:MM):", "Lopetus (HH:MM):", "Tuotteet (kpl):", "Palvelut (kpl):")
+$inLabels = @("Päivämäärä:", "Aloitus (HH:MM):", "Lopetus (HH:MM):", "Työkalusarjat (kpl):", "Tuunaukset (kpl):")
 $txts = @()
 for($i=0;$i -lt 5;$i++) {
     $l = New-Object Windows.Forms.Label; $l.Text = $inLabels[$i]; $l.Location = "20,$(40+($i*35))"; $l.AutoSize = $true; $gbNew.Controls.Add($l)
