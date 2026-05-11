@@ -98,7 +98,7 @@ function Invoke-Cloud ($data) {
 }
 
 $f = New-Object Windows.Forms.Form
-$f.Text = "FiveM Platinum Dashboard v4.9 (Debug Mode)"
+$f.Text = "FiveM Platinum Dashboard v4.9"
 $f.Size = New-Object Drawing.Size([int]$script:asetukset["ikkunaLeveys"], [int]$script:asetukset["ikkunaKorkeus"])
 $f.StartPosition = "CenterScreen"
 $f.TopMost = $true
