@@ -1,8 +1,17 @@
-﻿Add-Type -AssemblyName System.Windows.Forms
+try {
+    Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+    Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+    Add-Type -AssemblyName Microsoft.VisualBasic -ErrorAction Stop
+} catch {
+    Write-Host "Kriittinen virhe: Kirjastojen lataus epäonnistui. $($_.Exception.Message)" -ForegroundColor Red
+    pause
+    exit
+}
+
+Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName Microsoft.VisualBasic
 
-# --- POLUT JA KANSIOT ---
 $dataFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PlatinumDashboard"
 if (-not (Test-Path $dataFolder)) { 
     New-Item -ItemType Directory -Path $dataFolder | Out-Null 
@@ -11,12 +20,10 @@ if (-not (Test-Path $dataFolder)) {
 $configPath = Join-Path $dataFolder "config_safe.json"
 $historyPath = Join-Path $dataFolder "historia_safe.json"
 
-# ASETUKSET - MUOKKAA TÄMÄ:
 $script:googleScriptUrl = "https://script.google.com/macros/s/AKfycbwhRSWotX4sJv4u8834Bq6RmZT74QjmdqDsMQSbER7LPTctwYOA7cbs9-sQempfpT4p/exec"
 
 Write-Host "--- DEBUG: Käynnistetään Dashboard v4.9 ---" -ForegroundColor Cyan
 
-# --- TIETOJEN LATAUS ---
 function Save-All {
     $script:asetukset | ConvertTo-Json | Out-File $configPath -Encoding utf8
     $script:historia | ConvertTo-Json | Out-File $historyPath -Encoding utf8
@@ -38,7 +45,6 @@ foreach ($key in $defaults.Keys) {
     if (-not $script:asetukset.ContainsKey($key)) { $script:asetukset[$key] = $defaults[$key] }
 }
 
-# --- TURVALLISUUS JA API-AVAIN ---
 if ($script:asetukset["apiKey"] -eq "") {
     $prompt = "Anna API-avain (salasana) pilviyhteyttä varten:"
     $inputKey = [Microsoft.VisualBasic.Interaction]::InputBox($prompt, "Kirjaudu Pilveen", "")
@@ -52,7 +58,6 @@ if (Test-Path $historyPath) {
     $script:historia = if ($null -eq $tempHist) { @() } elseif ($tempHist -is [Array]) { $tempHist } else { @($tempHist) }
 } else { $script:historia = @() }
 
-# --- APUFUNKTIOT ---
 function Get-SafeNum ([object]$val) {
     if ($null -eq $val -or $val.ToString().Trim() -eq "") { return 0.0 }
     $clean = $val.ToString().Replace(" ", "").Replace(",", ".")
@@ -92,7 +97,6 @@ function Invoke-Cloud ($data) {
     }
 }
 
-# --- PÄÄIKKUNA ---
 $f = New-Object Windows.Forms.Form
 $f.Text = "FiveM Platinum Dashboard v4.9 (Debug Mode)"
 $f.Size = New-Object Drawing.Size([int]$script:asetukset["ikkunaLeveys"], [int]$script:asetukset["ikkunaKorkeus"])
@@ -103,7 +107,7 @@ $bgHtml = if($script:asetukset["teema"] -eq "Tumma") { "#121212" } else { "#FFFF
 $f.BackColor = [Drawing.ColorTranslator]::FromHtml($bgHtml)
 $textC = if($script:asetukset["teema"] -eq "Tumma") { [Drawing.Color]::White } else { [Drawing.Color]::Black }
 
-# LASKURI
+
 $gbCalc = New-Object Windows.Forms.GroupBox; $gbCalc.Text = "Palkkalaskuri aikavälille"; $gbCalc.Location = "30,20"; $gbCalc.Size = "400,100"; $gbCalc.ForeColor = $textC
 $f.Controls.Add($gbCalc)
 
@@ -124,11 +128,11 @@ $btnLaske.Add_Click({
     } catch { $lblRes.Text = "Virhe päivämäärissä!" }
 })
 
-# HALLINTA
+
 $btnSet = New-Object Windows.Forms.Button; $btnSet.Text = "⚙ ASETUKSET"; $btnSet.Location = "780,30"; $btnSet.Size = "130,35"; $btnSet.BackColor = [Drawing.Color]::FromArgb(51,51,51); $btnSet.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnSet)
 $btnClear = New-Object Windows.Forms.Button; $btnClear.Text = "🗑 TYHJENNÄ PILVI"; $btnClear.Location = "780,75"; $btnClear.Size = "130,35"; $btnClear.BackColor = [Drawing.Color]::FromArgb(68,34,34); $btnClear.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnClear)
 
-# LISÄYS
+
 $gbNew = New-Object Windows.Forms.GroupBox; $gbNew.Text = "LISÄÄ UUSI TYÖVUORO"; $gbNew.Location = "30,140"; $gbNew.Size = "880,240"; $gbNew.ForeColor = $textC
 $f.Controls.Add($gbNew)
 
@@ -147,7 +151,7 @@ $btnSave.BackColor = [Drawing.ColorTranslator]::FromHtml($script:asetukset["otsi
 $btnSave.ForeColor = [Drawing.Color]::White; $btnSave.Font = New-Object Drawing.Font("Segoe UI", 14, [Drawing.FontStyle]::Bold)
 $gbNew.Controls.Add($btnSave)
 
-# LISTA
+
 $lv = New-Object Windows.Forms.ListView; $lv.View = "Details"; $lv.Location = "30,400"; $lv.Size = "880,450"; $lv.FullRowSelect = $true
 $lv.BackColor = [Drawing.ColorTranslator]::FromHtml("#222222"); $lv.ForeColor = [Drawing.Color]::White
 $lv.Columns.Add("Pvm", 120) | Out-Null; $lv.Columns.Add("Aloitus", 100) | Out-Null; $lv.Columns.Add("Lopetus", 100) | Out-Null; $lv.Columns.Add("Tunnit", 100) | Out-Null; $lv.Columns.Add("Summa", 150) | Out-Null
@@ -172,7 +176,7 @@ $btnSave.Add_Click({
         $tuotteet = $txts[3].Text.Trim()
         $palvelut = $txts[4].Text.Trim()
 
-        # Varmistetaan aikojen jäsennys
+
         $t1 = [datetime]::ParseExact($alkuTxt, "HH:mm", $null)
         $t2 = [datetime]::ParseExact($loppuTxt, "HH:mm", $null)
         if($t2 -le $t1){ $t2 = $t2.AddDays(1) }
@@ -188,7 +192,7 @@ $btnSave.Add_Click({
             p = [int](Get-SafeNum $palvelut); s = [math]::Round($brutto,2) 
         }
         
-        # KORJAUS TÄSSÄ: Varmistetaan että historia on taulukko ja lisätään oikein
+
         if ($null -eq $script:historia) { $script:historia = @() }
         $tempList = [System.Collections.Generic.List[object]]::new()
         foreach ($item in $script:historia) { [void]$tempList.Add($item) }
