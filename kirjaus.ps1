@@ -98,7 +98,7 @@ function Invoke-Cloud ($data) {
 }
 
 $f = New-Object Windows.Forms.Form
-$f.Text = "FiveM Platinum Dashboard v4.9"
+$f.Text = "FiveM Platinum Dashboard v1.0"
 $f.Size = New-Object Drawing.Size([int]$script:asetukset["ikkunaLeveys"], [int]$script:asetukset["ikkunaKorkeus"])
 $f.StartPosition = "CenterScreen"
 $f.TopMost = $true
@@ -216,7 +216,7 @@ $btnSet.Add_Click({
     $f.TopMost = $false
     $sF = New-Object Windows.Forms.Form; $sF.Text = "Asetukset"; $sF.Size = "450,600"; $sF.StartPosition = "CenterParent"
     $flow = New-Object Windows.Forms.FlowLayoutPanel; $flow.Dock = "Fill"; $flow.AutoScroll = $true; $sF.Controls.Add($flow)
-    $settingsList = @(@("Tuntipalkka (€)", "tuntipalkka"),@("Tuotebonus (€)", "tuotebonus"),@("Palvelubonus (€)", "palvelubonus"),@("API-avain (Pilvi)", "apiKey"),@("Teema (Tumma/Vaalea)", "teema"),@("Valuuttamerkki", "valuutta"),@("IkkunaLeveys", "ikkunaLeveys"),@("IkkunaKorkeus", "ikkunaKorkeus"),@("Otsikkoväri (Hex)", "otsikkoVari"))
+    $settingsList = @(@("Tuntipalkka (€)", "tuntipalkka"),@("Työkalusarjat (€)", "tuotebonus"),@("Tuunaukset (€)", "palvelubonus"),@("API-avain (Pilvi)", "apiKey"),@("Teema (Tumma/Vaalea)", "teema"),@("Valuuttamerkki", "valuutta"),@("IkkunaLeveys", "ikkunaLeveys"),@("IkkunaKorkeus", "ikkunaKorkeus"),@("Otsikkoväri (Hex)", "otsikkoVari"))
     foreach($item in $settingsList) {
         $pan = New-Object Windows.Forms.Panel; $pan.Size = "400,40"
         $lab = New-Object Windows.Forms.Label; $lab.Text = $item[0]; $lab.Location = "10,10"; $lab.Width = 150; $pan.Controls.Add($lab)
