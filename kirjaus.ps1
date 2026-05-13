@@ -8,10 +8,6 @@ try {
     exit
 }
 
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-Add-Type -AssemblyName Microsoft.VisualBasic
-
 $dataFolder = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PlatinumDashboard"
 if (-not (Test-Path $dataFolder)) { 
     New-Item -ItemType Directory -Path $dataFolder | Out-Null 
@@ -21,8 +17,6 @@ $configPath = Join-Path $dataFolder "config_safe.json"
 $historyPath = Join-Path $dataFolder "historia_safe.json"
 
 $script:googleScriptUrl = "https://script.google.com/macros/s/AKfycbwhRSWotX4sJv4u8834Bq6RmZT74QjmdqDsMQSbER7LPTctwYOA7cbs9-sQempfpT4p/exec"
-
-Write-Host "--- DEBUG: Käynnistetään Dashboard v5.0 ---" -ForegroundColor Cyan
 
 function Save-All {
     $script:asetukset | ConvertTo-Json | Out-File $configPath -Encoding utf8
@@ -36,7 +30,7 @@ if (Test-Path $configPath) {
 } else { $script:asetukset = @{} }
 
 $defaults = @{
-    tuntipalkka = 15.0; tuotebonus = 150.0; palvelubonus = 100.0; 
+    tuntipalkka = 7500; tuotebonus = 50; palvelubonus = 1000; 
     teema = "Tumma"; valuutta = "€"; tuhatErotin = " ";
     ikkunaLeveys = 950; ikkunaKorkeus = 950;
     otsikkoVari = "#0078D4"; apiKey = ""
@@ -73,40 +67,36 @@ function Format-Number ($num) {
 }
 
 function Invoke-Cloud ($data) {
-    Write-Host "--- DEBUG: Lähetetään tietoja pilveen... ---" -ForegroundColor Yellow
     try {
         $payload = @{}
         foreach($prop in $data.psobject.Properties) { 
-            if ($prop.Name -eq "s" -or $prop.Name -eq "t") {
+            # Muutetaan kesto (t) ja summa (s) selkeiksi tekstimuodoiksi pilveä varten
+            if ($prop.Name -eq "s") {
                 $cleanNum = Get-SafeNum $prop.Value
                 $payload[$prop.Name] = $cleanNum.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+            } elseif ($prop.Name -eq "t") {
+                # Lähetetään kesto tekstinä "X h Y min" myös pilveen
+                $payload[$prop.Name] = $prop.Value
             } else {
                 $payload[$prop.Name] = $prop.Value 
             }
         }
         $payload["auth"] = $script:asetukset["apiKey"]
         $json = $payload | ConvertTo-Json
-        
-        Write-Host "DEBUG Payload: $json" -ForegroundColor Gray
         $response = Invoke-RestMethod -Uri $script:googleScriptUrl -Method Post -Body $json -ContentType "application/json"
-        Write-Host "DEBUG Pilven vastaus: $response" -ForegroundColor Green
         return $response
-    } catch { 
-        Write-Host "DEBUG VIRHE LÄHETYKSESSÄ: $($_.Exception.Message)" -ForegroundColor Red
-        return "Yhteysvirhe" 
-    }
+    } catch { return "Yhteysvirhe" }
 }
 
 $f = New-Object Windows.Forms.Form
-$f.Text = "FiveM Platinum Dashboard v1.0"
+$f.Text = "FiveM Platinum Dashboard v1.1"
 $f.Size = New-Object Drawing.Size([int]$script:asetukset["ikkunaLeveys"], [int]$script:asetukset["ikkunaKorkeus"])
 $f.StartPosition = "CenterScreen"
-$f.TopMost = $true
+$f.TopMost = $false
 
 $bgHtml = if($script:asetukset["teema"] -eq "Tumma") { "#121212" } else { "#FFFFFF" }
 $f.BackColor = [Drawing.ColorTranslator]::FromHtml($bgHtml)
 $textC = if($script:asetukset["teema"] -eq "Tumma") { [Drawing.Color]::White } else { [Drawing.Color]::Black }
-
 
 $gbCalc = New-Object Windows.Forms.GroupBox; $gbCalc.Text = "Palkkalaskuri aikavälille"; $gbCalc.Location = "30,20"; $gbCalc.Size = "400,100"; $gbCalc.ForeColor = $textC
 $f.Controls.Add($gbCalc)
@@ -128,10 +118,8 @@ $btnLaske.Add_Click({
     } catch { $lblRes.Text = "Virhe päivämäärissä!" }
 })
 
-
 $btnSet = New-Object Windows.Forms.Button; $btnSet.Text = "ASETUKSET"; $btnSet.Location = "780,30"; $btnSet.Size = "130,35"; $btnSet.BackColor = [Drawing.Color]::FromArgb(51,51,51); $btnSet.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnSet)
 $btnClear = New-Object Windows.Forms.Button; $btnClear.Text = "TYHJENNÄ PILVI"; $btnClear.Location = "780,75"; $btnClear.Size = "130,35"; $btnClear.BackColor = [Drawing.Color]::FromArgb(68,34,34); $btnClear.ForeColor = [Drawing.Color]::White; $f.Controls.Add($btnClear)
-
 
 $gbNew = New-Object Windows.Forms.GroupBox; $gbNew.Text = "LISÄÄ UUSI TYÖVUORO"; $gbNew.Location = "30,140"; $gbNew.Size = "880,240"; $gbNew.ForeColor = $textC
 $f.Controls.Add($gbNew)
@@ -143,92 +131,113 @@ for($i=0;$i -lt 5;$i++) {
     $t = New-Object Windows.Forms.TextBox; $t.Location = "180,$(38+($i*35))"; $t.Width = 100; $gbNew.Controls.Add($t); $txts += $t
 }
 $txts[0].Text = (Get-Date).ToString("dd.MM.yyyy")
-$txts[1].Text = "08:00"; $txts[2].Text = "16:00"; $txts[3].Text = "0"; $txts[4].Text = "0"
+$txts[1].Text = "08:31"; $txts[2].Text = "16:32"; $txts[3].Text = "0"; $txts[4].Text = "0"
 
 $btnSave = New-Object Windows.Forms.Button
-$btnSave.Text = "TALLENNA JA LÄHETÄ"; $btnSave.Location = "350,40"; $btnSave.Size = "480,170"
+$btnSave.Text = "TALLENNA JA LÄHETÄ"; $btnSave.Location = "350,40"; $btnSave.Size = "300,170"
 $btnSave.BackColor = [Drawing.ColorTranslator]::FromHtml($script:asetukset["otsikkoVari"])
 $btnSave.ForeColor = [Drawing.Color]::White; $btnSave.Font = New-Object Drawing.Font("Segoe UI", 14, [Drawing.FontStyle]::Bold)
 $gbNew.Controls.Add($btnSave)
 
+$btnEdit = New-Object Windows.Forms.Button
+$btnEdit.Text = "MUOKKAA KIRJAUKSIA"; $btnEdit.Location = "660,40"; $btnEdit.Size = "200,170"
+$btnEdit.BackColor = [Drawing.Color]::DarkOrange; $btnEdit.ForeColor = [Drawing.Color]::White; $btnEdit.Font = New-Object Drawing.Font("Segoe UI", 11, [Drawing.FontStyle]::Bold)
+$gbNew.Controls.Add($btnEdit)
 
 $lv = New-Object Windows.Forms.ListView; $lv.View = "Details"; $lv.Location = "30,400"; $lv.Size = "880,450"; $lv.FullRowSelect = $true
 $lv.BackColor = [Drawing.ColorTranslator]::FromHtml("#222222"); $lv.ForeColor = [Drawing.Color]::White
-$lv.Columns.Add("Pvm", 120) | Out-Null; $lv.Columns.Add("Aloitus", 100) | Out-Null; $lv.Columns.Add("Lopetus", 100) | Out-Null; $lv.Columns.Add("Tunnit", 100) | Out-Null; $lv.Columns.Add("Summa", 150) | Out-Null
+$lv.Columns.Add("Pvm", 120) | Out-Null; $lv.Columns.Add("Aloitus", 100) | Out-Null; $lv.Columns.Add("Lopetus", 100) | Out-Null; $lv.Columns.Add("Kesto", 120) | Out-Null; $lv.Columns.Add("Summa", 150) | Out-Null
 $f.Controls.Add($lv)
 
-function Refresh-List {
+function Update-ListView {
     $lv.Items.Clear()
     foreach($h in $script:historia) {
         $item = New-Object Windows.Forms.ListViewItem([string]$h.pvm)
-        [void]$item.SubItems.Add([string]$h.alku); [void]$item.SubItems.Add([string]$h.loppu); [void]$item.SubItems.Add("$([string]$h.t) h"); [void]$item.SubItems.Add((Format-Number $h.s) + " " + $script:asetukset["valuutta"])
+        [void]$item.SubItems.Add([string]$h.alku); [void]$item.SubItems.Add([string]$h.loppu)
+        [void]$item.SubItems.Add([string]$h.t) # t on nyt valmiiksi muotoiltu teksti
+        [void]$item.SubItems.Add((Format-Number $h.s) + " " + $script:asetukset["valuutta"])
+        $item.Tag = $h
         [void]$lv.Items.Add($item)
     }
 }
 
+$btnEdit.Add_Click({
+    if ($lv.SelectedItems.Count -eq 0) { [Windows.Forms.MessageBox]::Show("Valitse ensin alapuolelta oikea rivi jota haluat muokata!"); return }
+    $selected = $lv.SelectedItems[0].Tag
+    $txts[0].Text = $selected.pvm
+    $txts[1].Text = $selected.alku
+    $txts[2].Text = $selected.loppu
+    $txts[3].Text = $selected.k.ToString()
+    $txts[4].Text = $selected.p.ToString()
+    
+    $newHist = New-Object System.Collections.Generic.List[object]
+    foreach ($item in $script:historia) { if ($item -ne $selected) { $newHist.Add($item) } }
+    $script:historia = $newHist.ToArray()
+    Update-ListView
+})
 
 $btnSave.Add_Click({
-    Write-Host "--- DEBUG: Tallennus aloitettu ---" -ForegroundColor Blue
     try {
-        $pvmTxt = $txts[0].Text.Trim()
-        $alkuTxt = $txts[1].Text.Trim()
-        $loppuTxt = $txts[2].Text.Trim()
-        $tuotteet = $txts[3].Text.Trim()
-        $palvelut = $txts[4].Text.Trim()
+        $pvmTxt = $txts[0].Text.Trim(); $alkuTxt = $txts[1].Text.Trim(); $loppuTxt = $txts[2].Text.Trim()
+        $tuotteet = Get-SafeNum $txts[3].Text.Trim(); $palvelut = Get-SafeNum $txts[4].Text.Trim()
 
-
-        $t1 = [datetime]::ParseExact($alkuTxt, "HH:mm", $null)
-        $t2 = [datetime]::ParseExact($loppuTxt, "HH:mm", $null)
-        if($t2 -le $t1){ $t2 = $t2.AddDays(1) }
+        $kestoTunteina = 0.0
+        $kestoTeksti = "0 h 0 min"
         
-        $kesto = ($t2 - $t1).TotalHours
-        $brutto = ($kesto * (Get-SafeNum $script:asetukset["tuntipalkka"])) + 
-                  ((Get-SafeNum $tuotteet) * (Get-SafeNum $script:asetukset["tuotebonus"])) + 
-                  ((Get-SafeNum $palvelut) * (Get-SafeNum $script:asetukset["palvelubonus"]))
+        if ($alkuTxt -ne "" -and $loppuTxt -ne "") {
+            $t1 = [datetime]::ParseExact($alkuTxt, "HH:mm", $null); 
+            $t2 = [datetime]::ParseExact($loppuTxt, "HH:mm", $null)
+
+            if($t2 -lt $t1){ 
+                $msg = "Varmista kellonajat: Aloitusaika ($alkuTxt) on myöhäisempi kuin lopetusaika ($loppuTxt).`n`nTulkitaanko tämä vuorokauden vaihdokseksi?"
+                $confirm = [Windows.Forms.MessageBox]::Show($msg, "Varmistus", "YesNoCancel", "Warning")
+                if ($confirm -eq "Yes") { $t2 = $t2.AddDays(1) } elseif ($confirm -eq "No") { return } else { return }
+            }
+            
+            $ts = $t2 - $t1
+            $kestoTunteina = $ts.TotalHours
+            $kestoTeksti = "$([math]::Floor($ts.TotalHours)) h $($ts.Minutes) min"
+            
+        } elseif ($tuotteet -eq 0 -and $palvelut -eq 0) {
+            [Windows.Forms.MessageBox]::Show("Syötä tiedot!"); return
+        }
+
+        $brutto = ($kestoTunteina * (Get-SafeNum $script:asetukset["tuntipalkka"])) + 
+                  ($tuotteet * (Get-SafeNum $script:asetukset["tuotebonus"])) + 
+                  ($palvelut * (Get-SafeNum $script:asetukset["palvelubonus"]))
         
         $uusi = [PSCustomObject]@{ 
             pvm = $pvmTxt; alku = $alkuTxt; loppu = $loppuTxt; 
-            t = [math]::Round($kesto,2); k = [int](Get-SafeNum $tuotteet); 
-            p = [int](Get-SafeNum $palvelut); s = [math]::Round($brutto,2) 
+            t = $kestoTeksti; k = [int]$tuotteet; 
+            p = [int]$palvelut; s = [math]::Round($brutto,2) 
         }
         
-
-        if ($null -eq $script:historia) { $script:historia = @() }
-        $tempList = [System.Collections.Generic.List[object]]::new()
-        foreach ($item in $script:historia) { [void]$tempList.Add($item) }
-        [void]$tempList.Add($uusi)
+        $tempList = [System.Collections.Generic.List[object]]::new($script:historia)
+        $tempList.Add($uusi)
         $script:historia = $tempList.ToArray()
 
-        Save-All
-        Refresh-List
-        
+        Save-All; Update-ListView
         $status = Invoke-Cloud $uusi
         [Windows.Forms.MessageBox]::Show("Tila: $status")
-    } catch { 
-        Write-Host "--- DEBUG VIRHE ---" -ForegroundColor Red
-        Write-Host "Virheen syy: $($_.Exception.Message)" -ForegroundColor Red
-        [Windows.Forms.MessageBox]::Show("Virhe syötteissä! Katso konsoli.") 
-    }
+    } catch { [Windows.Forms.MessageBox]::Show("Virhe! Tarkista muoto HH:MM.") }
 })
 
-
 $btnSet.Add_Click({
-    $f.TopMost = $false
     $sF = New-Object Windows.Forms.Form; $sF.Text = "Asetukset"; $sF.Size = "450,600"; $sF.StartPosition = "CenterParent"
     $flow = New-Object Windows.Forms.FlowLayoutPanel; $flow.Dock = "Fill"; $flow.AutoScroll = $true; $sF.Controls.Add($flow)
-    $settingsList = @(@("Tuntipalkka (€)", "tuntipalkka"),@("Työkalusarjat (€)", "tuotebonus"),@("Tuunaukset (€)", "palvelubonus"),@("API-avain (Pilvi)", "apiKey"),@("Teema (Tumma/Vaalea)", "teema"),@("Valuuttamerkki", "valuutta"),@("IkkunaLeveys", "ikkunaLeveys"),@("IkkunaKorkeus", "ikkunaKorkeus"),@("Otsikkoväri (Hex)", "otsikkoVari"))
+    $settingsList = @(@("Tuntipalkka", "tuntipalkka"),@("Työkalusarjat", "tuotebonus"),@("Tuunaukset", "palvelubonus"),@("API-avain", "apiKey"),@("Teema", "teema"),@("Valuutta", "valuutta"),@("Leveys", "ikkunaLeveys"),@("Korkeus", "ikkunaKorkeus"),@("Väri", "otsikkoVari"))
     foreach($item in $settingsList) {
         $pan = New-Object Windows.Forms.Panel; $pan.Size = "400,40"
         $lab = New-Object Windows.Forms.Label; $lab.Text = $item[0]; $lab.Location = "10,10"; $lab.Width = 150; $pan.Controls.Add($lab)
         $tex = New-Object Windows.Forms.TextBox; $tex.Text = $script:asetukset[$item[1]]; $tex.Location = "180,8"; $tex.Name = $item[1]; $pan.Controls.Add($tex)
         $flow.Controls.Add($pan)
     }
-    $bSave = New-Object Windows.Forms.Button; $bSave.Text = "TALLENNA JA PÄIVITÄ"; $bSave.Dock = "Bottom"; $bSave.Height = 45
+    $bSave = New-Object Windows.Forms.Button; $bSave.Text = "TALLENNA"; $bSave.Dock = "Bottom"; $bSave.Height = 45
     $bSave.Add_Click({
         foreach($c in $flow.Controls) { foreach($cc in $c.Controls) { if($cc -is [Windows.Forms.TextBox]){ $script:asetukset[$cc.Name] = $cc.Text } } }
         Save-All; $sF.Close(); $f.Close()
     })
-    $sF.Controls.Add($bSave); $sF.Add_FormClosing({ $f.TopMost = $true }); $sF.ShowDialog()
+    $sF.Controls.Add($bSave); $sF.ShowDialog()
 })
 
 $btnClear.Add_Click({
@@ -238,5 +247,5 @@ $btnClear.Add_Click({
     }
 })
 
-Refresh-List
+update-ListView
 $f.ShowDialog()
